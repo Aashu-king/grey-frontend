@@ -57,7 +57,9 @@ export default function ProductListing() {
   const [addedProduct, setAddedProduct] = useState<string | null>(null)
   const [loadingProductId, setLoadingProductId] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
 
+  // Fetch all products
   const { 
     data: products, 
     isLoading
@@ -67,11 +69,20 @@ export default function ProductListing() {
     staleTime: 1000 * 60 * 5
   })
 
-  const filteredProducts = products?.filter(product => 
-    product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Extract unique categories from products
+  const categories = [...new Set(products?.map(product => product.category) || [])]
+
+  // Filter products based on search term and selected category
+  const filteredProducts = products?.filter(product => {
+    const matchesSearch = 
+      product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      product.category.toLowerCase().includes(searchTerm.toLowerCase())
+    
+    const matchesCategory = selectedCategory ? product.category === selectedCategory : true
+    
+    return matchesSearch && matchesCategory
+  })
 
   const addToCartMutation = useMutation({
     mutationFn: async (product: CartProduct) => {
@@ -129,28 +140,47 @@ export default function ProductListing() {
       />
 
       <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6 sm:py-12 lg:max-w-7xl lg:px-8">
-        {/* Search Box */}
-        <div className="relative mb-8 max-w-md mx-auto">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+        {/* Search and Filter Section */}
+        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center justify-between">
+          {/* Search Box */}
+          <div className="relative w-full sm:w-auto sm:max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center"
+              >
+                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
           </div>
-          <input
-            type="text"
-            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-            placeholder="Search products..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+
+          {/* Category Filter */}
+          <div className="w-full sm:w-auto">
+            <select
+              value={selectedCategory || ''}
+              onChange={(e) => setSelectedCategory(e.target.value || null)}
+              className="block w-full rounded-md border-gray-300 py-2 pl-3 pr-10 text-base focus:border-indigo-500 focus:outline-none focus:ring-indigo-500 sm:text-sm"
             >
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
+              <option value="">All Categories</option>
+              {categories.map((category) => (
+                <option key={category} value={category}>
+                  {category.charAt(0).toUpperCase() + category.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {isLoading ? (
@@ -184,6 +214,9 @@ export default function ProductListing() {
                           <h3 className="text-sm text-gray-700 line-clamp-1">
                             {product.title}
                           </h3>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {product.category}
+                          </p>
                           <div className="flex items-center mt-1">
                             <div className="flex items-center">
                               {[...Array(5)].map((_, i) => (
@@ -228,7 +261,9 @@ export default function ProductListing() {
             ) : (
               <div className="col-span-full text-center py-12">
                 <p className="text-gray-500">
-                  {searchTerm ? "No products found matching your search." : "No products available."}
+                  {searchTerm || selectedCategory 
+                    ? "No products found matching your criteria." 
+                    : "No products available."}
                 </p>
               </div>
             )}

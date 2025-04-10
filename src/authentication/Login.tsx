@@ -35,7 +35,7 @@ export default function Login() {
 
             console.log('Login attempt with:', { username, password })
             localStorage.setItem('token', response.token)
-            navigate('/dashboard')
+            navigate('/products')
         } catch (err) {
             console.log('err: ', err);
             setError('Invalid email or password')
